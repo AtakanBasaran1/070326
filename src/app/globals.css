@@ -1,26 +1,226 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ivory: #f2f2f2;
+  --color-cream: #ececec;
+  --color-wine: #111111;
+  --color-wine-deep: #050505;
+  --color-rose: #8a8a8a;
+  --color-gold: #cfcfcf;
+  --color-gold-soft: #e6e6e6;
+  --color-ink: #080808;
+  --color-blush: #161616;
+  --color-muted: #6e6e6e;
+  --font-serif: var(--font-cormorant), "Times New Roman", serif;
+  --font-sans: var(--font-outfit), system-ui, sans-serif;
+  --font-script: var(--font-great-vibes), cursive;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #050505;
+  color: var(--color-ivory);
+  font-family: var(--font-outfit), system-ui, sans-serif;
+}
+
+::selection {
+  background: #f2f2f2;
+  color: #050505;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 999px;
+}
+
+.grain {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  opacity: 0.14;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.vignette-soft {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.18) 0%,
+    transparent 18%,
+    transparent 82%,
+    rgba(0, 0, 0, 0.28) 100%
+  );
+}
+
+.still {
+  position: relative;
+  border: 1px solid rgba(242, 242, 242, 0.18);
+}
+
+.ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--color-gold);
+}
+
+.ornament::before,
+.ornament::after {
+  content: "";
+  height: 1px;
+  width: 64px;
+  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+}
+
+@keyframes kenburns {
+  0% {
+    transform: scale(1.06) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.16) translate3d(-1.2%, -0.8%, 0);
+  }
+}
+
+.kenburns {
+  animation: kenburns 28s ease-out forwards;
+}
+
+.hero-still {
+  object-position: 50% 42%;
+}
+
+@media (max-width: 767px) {
+  .hero-still {
+    object-position: 44% 40%;
+    animation: none;
+    transform: none;
+  }
+}
+
+.film-still {
+  filter: grayscale(1) contrast(1.18) brightness(0.92);
+}
+
+.letterbox {
+  height: 5.5vh;
+  min-height: 36px;
+  background: #000;
+}
+
+.film-frame {
+  position: relative;
+  background: #000;
+  padding: 0 28px;
+}
+
+.film-frame::before,
+.film-frame::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 22px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    #111 0 10px,
+    #f2f2f2 10px 22px,
+    #111 22px 36px
+  );
+  opacity: 0.85;
+}
+
+.film-frame::before {
+  left: 0;
+}
+
+.film-frame::after {
+  right: 0;
+}
+
+.film-print {
+  background: #111;
+  padding: 14px 14px 22px;
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.8);
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.pulse-soft {
+  animation: pulse-soft 2.8s ease-in-out infinite;
+}
+
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.92;
+  }
+  94% {
+    opacity: 1;
+  }
+}
+
+.flicker {
+  animation: flicker 6s linear infinite;
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gate-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-7px);
+  }
+  40% {
+    transform: translateX(7px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.gate-shake {
+  animation: gate-shake 0.38s ease;
 }
