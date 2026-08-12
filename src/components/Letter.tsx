@@ -15,7 +15,7 @@ export default function Letter() {
           viewport={{ once: true, amount: 0.2 }}
           transition={{ duration: 0.8 }}
         >
-          <p className="font-serif text-3xl italic text-ivory">Eylülüm.</p>
+          <p className="font-serif text-3xl italic text-ivory">Eylül&apos;üm.</p>
           <p className="mt-1 font-serif text-lg text-ivory/65 italic">
             Güzelim benim.
           </p>
@@ -33,7 +33,7 @@ export default function Letter() {
             </p>
             <p>
               Çünkü ben seninle sadece gülüyor, ağlıyor veya öylesine bir şey
-              yaşamıyorum. Eylülüm, ben aşkı seninle öğrendim. Bu bambaşka
+              yaşamıyorum. Eylül&apos;üm, ben aşkı seninle öğrendim. Bu bambaşka
               duyguyu her haliyle, her gün ve her an seninle yaşadım.
             </p>
             <p>
