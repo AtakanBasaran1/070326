@@ -19,21 +19,22 @@ export default function AmbientAudio() {
     setPlaying(!audio.paused && !audio.muted && wantSound.current);
   }, []);
 
-  const startPlayback = useCallback(async () => {
+  const beginSound = useCallback(async () => {
     const audio = audioRef.current;
-    if (!audio || !wantSound.current) return;
+    if (!audio) return;
 
+    unlocked.current = true;
+    wantSound.current = true;
+    setMuted(false);
     audio.loop = true;
     audio.volume = 0.72;
     audio.muted = false;
 
-    if (audio.paused) {
-      try {
-        await audio.play();
-        setMissingFile(false);
-      } catch {
-        /* tarayıcı henüz izin vermedi */
-      }
+    try {
+      await audio.play();
+      setMissingFile(false);
+    } catch {
+      /* tarayıcı henüz izin vermedi */
     }
     syncPlaying();
   }, [syncPlaying]);
@@ -53,26 +54,31 @@ export default function AmbientAudio() {
     audio.addEventListener("pause", onPause);
     audio.addEventListener("error", onError);
 
-    const unlock = () => {
+    const unlockFromPage = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("[data-cuddle-box]")) return;
       if (unlocked.current) return;
-      unlocked.current = true;
-      void startPlayback();
+      void beginSound();
     };
 
-    window.addEventListener("pointerdown", unlock, { capture: true });
-    window.addEventListener("keydown", unlock, { capture: true });
-    window.addEventListener("touchstart", unlock, { capture: true });
-    window.addEventListener("eylul-unlock-audio", unlock);
+    const onUnlockEvent = () => {
+      void beginSound();
+    };
+
+    window.addEventListener("pointerdown", unlockFromPage, { capture: true });
+    window.addEventListener("keydown", unlockFromPage, { capture: true });
+    window.addEventListener("touchstart", unlockFromPage, { capture: true });
+    window.addEventListener("eylul-unlock-audio", onUnlockEvent);
 
     const keepAlive = window.setInterval(() => {
       if (!unlocked.current || !wantSound.current) return;
       const a = audioRef.current;
-      if (a && a.paused && !a.muted) void startPlayback();
+      if (a && a.paused && !a.muted) void beginSound();
     }, 4000);
 
     const onVisible = () => {
       if (document.visibilityState === "visible" && unlocked.current) {
-        void startPlayback();
+        void beginSound();
       }
     };
     document.addEventListener("visibilitychange", onVisible);
@@ -81,35 +87,35 @@ export default function AmbientAudio() {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("error", onError);
-      window.removeEventListener("pointerdown", unlock, { capture: true });
-      window.removeEventListener("keydown", unlock, { capture: true });
-      window.removeEventListener("touchstart", unlock, { capture: true });
-      window.removeEventListener("eylul-unlock-audio", unlock);
+      window.removeEventListener("pointerdown", unlockFromPage, {
+        capture: true,
+      });
+      window.removeEventListener("keydown", unlockFromPage, { capture: true });
+      window.removeEventListener("touchstart", unlockFromPage, {
+        capture: true,
+      });
+      window.removeEventListener("eylul-unlock-audio", onUnlockEvent);
       window.clearInterval(keepAlive);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [startPlayback, syncPlaying]);
+  }, [beginSound, syncPlaying]);
 
-  const toggle = () => {
+  const onBoxClick = () => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (!unlocked.current) {
-      window.dispatchEvent(new Event("eylul-unlock-audio"));
-      return;
-    }
+    const isAudible =
+      playing && !muted && wantSound.current && !audio.paused && !audio.muted;
 
-    if (wantSound.current) {
+    if (isAudible) {
       wantSound.current = false;
       audio.muted = true;
       setMuted(true);
       setPlaying(false);
-    } else {
-      wantSound.current = true;
-      audio.muted = false;
-      setMuted(false);
-      void startPlayback();
+      return;
     }
+
+    void beginSound();
   };
 
   const statusLine = missingFile
@@ -126,7 +132,8 @@ export default function AmbientAudio() {
 
       <button
         type="button"
-        onClick={toggle}
+        data-cuddle-box
+        onClick={onBoxClick}
         className="fixed right-5 bottom-5 left-5 z-[110] mx-auto max-w-[340px] border border-ivory/25 bg-black px-5 py-4 text-left shadow-[0_12px_40px_rgba(0,0,0,0.55)] md:left-auto md:w-[340px]"
         aria-label={muted ? "Sesi aç" : "Sesi kapat"}
       >
