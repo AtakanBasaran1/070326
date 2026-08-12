@@ -1,44 +1,62 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-const VIDEO_ID = "GCvmkbFPIWM";
-
-function embedUrl(mute: boolean) {
-  const origin = encodeURIComponent(window.location.origin);
-  return `https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&mute=${mute ? 1 : 0}&loop=1&playlist=${VIDEO_ID}&playsinline=1&controls=0&rel=0&modestbranding=1&enablejsapi=1&origin=${origin}`;
-}
-
-function sendCommand(iframe: HTMLIFrameElement, func: string) {
-  iframe.contentWindow?.postMessage(
-    JSON.stringify({ event: "command", func, args: [] }),
-    "*",
-  );
-}
+/** Site kökünde: public/audio/cuddle.mp3 */
+const AUDIO_SRC = "/audio/cuddle.mp3";
 
 export default function AmbientAudio() {
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const unlocked = useRef(false);
   const wantSound = useRef(true);
   const [muted, setMuted] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [missingFile, setMissingFile] = useState(false);
+
+  const syncPlaying = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setPlaying(!audio.paused && !audio.muted && wantSound.current);
+  }, []);
+
+  const startPlayback = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio || !wantSound.current) return;
+
+    audio.loop = true;
+    audio.volume = 0.72;
+    audio.muted = false;
+
+    if (audio.paused) {
+      try {
+        await audio.play();
+        setMissingFile(false);
+      } catch {
+        /* tarayıcı henüz izin vermedi */
+      }
+    }
+    syncPlaying();
+  }, [syncPlaying]);
 
   useEffect(() => {
-    const iframe = document.createElement("iframe");
-    iframe.title = "cuddle";
-    iframe.allow = "autoplay; encrypted-media";
-    iframe.src = embedUrl(true);
-    iframe.setAttribute(
-      "style",
-      "position:fixed;right:20px;bottom:20px;width:320px;height:180px;opacity:0;pointer-events:none;z-index:109;border:0;",
-    );
-    document.body.appendChild(iframe);
-    iframeRef.current = iframe;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.loop = true;
+    audio.preload = "auto";
+
+    const onPlay = () => syncPlaying();
+    const onPause = () => syncPlaying();
+    const onError = () => setMissingFile(true);
+
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("error", onError);
 
     const unlock = () => {
       if (unlocked.current) return;
       unlocked.current = true;
-      sendCommand(iframe, "unMute");
-      sendCommand(iframe, "playVideo");
+      void startPlayback();
     };
 
     window.addEventListener("pointerdown", unlock, { capture: true });
@@ -46,58 +64,88 @@ export default function AmbientAudio() {
     window.addEventListener("touchstart", unlock, { capture: true });
     window.addEventListener("eylul-unlock-audio", unlock);
 
+    const keepAlive = window.setInterval(() => {
+      if (!unlocked.current || !wantSound.current) return;
+      const a = audioRef.current;
+      if (a && a.paused && !a.muted) void startPlayback();
+    }, 4000);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && unlocked.current) {
+        void startPlayback();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("error", onError);
       window.removeEventListener("pointerdown", unlock, { capture: true });
       window.removeEventListener("keydown", unlock, { capture: true });
       window.removeEventListener("touchstart", unlock, { capture: true });
       window.removeEventListener("eylul-unlock-audio", unlock);
-      iframe.remove();
-      iframeRef.current = null;
+      window.clearInterval(keepAlive);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [startPlayback, syncPlaying]);
 
   const toggle = () => {
-    const iframe = iframeRef.current;
+    const audio = audioRef.current;
+    if (!audio) return;
+
     if (!unlocked.current) {
       window.dispatchEvent(new Event("eylul-unlock-audio"));
-      wantSound.current = true;
-      setMuted(false);
       return;
     }
 
     if (wantSound.current) {
       wantSound.current = false;
+      audio.muted = true;
       setMuted(true);
-      if (iframe) sendCommand(iframe, "mute");
+      setPlaying(false);
     } else {
       wantSound.current = true;
+      audio.muted = false;
       setMuted(false);
-      if (iframe) sendCommand(iframe, "unMute");
+      void startPlayback();
     }
   };
 
+  const statusLine = missingFile
+    ? "dosya yok · public/audio/cuddle.mp3"
+    : muted
+      ? "sessiz"
+      : playing
+        ? "çalıyor"
+        : "dokun · başlasın";
+
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      className="fixed right-5 bottom-5 left-5 z-[110] mx-auto max-w-[340px] border border-ivory/25 bg-black px-5 py-4 text-left shadow-[0_12px_40px_rgba(0,0,0,0.55)] md:left-auto md:w-[340px]"
-      aria-label={muted ? "Sesi aç" : "Sesi kapat"}
-    >
-      <span className="flex items-start gap-3">
-        <span
-          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-            muted ? "bg-ivory/25" : "bg-ivory"
-          }`}
-        />
-        <span>
-          <span className="block font-serif text-[16px] leading-snug text-ivory">
-            Dinlediğimde aklıma gelen şarkımız sevgilim.
-          </span>
-          <span className="mt-1.5 block text-[10px] tracking-[0.22em] text-ivory/45 uppercase">
-            {muted ? "sessiz" : "çalıyor"} · cuddle
+    <>
+      <audio ref={audioRef} src={AUDIO_SRC} loop playsInline preload="auto" />
+
+      <button
+        type="button"
+        onClick={toggle}
+        className="fixed right-5 bottom-5 left-5 z-[110] mx-auto max-w-[340px] border border-ivory/25 bg-black px-5 py-4 text-left shadow-[0_12px_40px_rgba(0,0,0,0.55)] md:left-auto md:w-[340px]"
+        aria-label={muted ? "Sesi aç" : "Sesi kapat"}
+      >
+        <span className="flex items-start gap-3">
+          <span
+            className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+              playing ? "bg-ivory" : "bg-ivory/25"
+            }`}
+          />
+          <span>
+            <span className="block font-serif text-[16px] leading-snug text-ivory">
+              Dinlediğimde aklıma gelen şarkımız sevgilim.
+            </span>
+            <span className="mt-1.5 block text-[10px] tracking-[0.22em] text-ivory/45 uppercase">
+              {statusLine} · cuddle
+            </span>
           </span>
         </span>
-      </span>
-    </button>
+      </button>
+    </>
   );
 }
