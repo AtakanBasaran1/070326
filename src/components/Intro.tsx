@@ -81,6 +81,9 @@ export default function Intro({ onDone }: { onDone: () => void }) {
       className={`fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black ${
         phase === "welcome" ? "cursor-pointer" : ""
       }`}
+      onPointerDown={() => {
+        window.dispatchEvent(new Event("eylul-unlock-audio"));
+      }}
       onClick={phase === "welcome" ? finish : undefined}
     >
       <div className="relative z-10 w-full max-w-2xl px-8 text-center">
